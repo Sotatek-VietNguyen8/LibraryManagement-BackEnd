@@ -34,6 +34,12 @@ const docketSchema  = new mongoose.Schema(
             type: Date,
             required: true
         },
+        soLuongMuon: {
+            type: Number,
+            required: true,
+            default: 1, 
+            min: 1
+        },
         ngayTra: {
             type: Date,
             required: false

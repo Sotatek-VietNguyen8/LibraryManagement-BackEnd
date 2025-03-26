@@ -1,8 +1,9 @@
 import express from "express";
-import { signUp, login, logout, addBook, checkAuth, getBook, searchBook, findUser, getUser, updateUser, deleteUser, updateBook, deleteBook, bookById } from "../controllers/auth.controller.js";
+import { signUp, login, logout, checkAuth, findUser, getUser, updateUser, deleteUser } from "../controllers/auth.controller.js";
 import { protectRoute } from "../midleware/auth.middleware.js";
 import { addCard, getCard, searchCard } from "../controllers/card.controller.js";
 import { checkAndUpdateStatus, creatDocket, getDocket, upadateTraSach } from "../controllers/docket.controller.js";
+import { addBook, bookById, deleteBook, getBook, searchBook, updateBook } from "../controllers/book.controller.js";
 
 const router = express.Router()
 
@@ -33,7 +34,7 @@ router.post("/createDocket", creatDocket)
 router.get("/getDocket", getDocket)
 router.post("/checkAndUpdateStatus", checkAndUpdateStatus)
 router.put("/updateTraSach/:_id", upadateTraSach)
-
+//router.get("/getBorrowedBooks", getBorrowedBooks)
 
 export default router
 

@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema(
         email:{
             type: String,
             required: false
-        }
+        },
     },
     {
         timestamps: true
