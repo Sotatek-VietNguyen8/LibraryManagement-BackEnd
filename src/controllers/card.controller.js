@@ -74,3 +74,21 @@ export const searchCard = async (req, res) => {
     }
 };
 
+export const checkAndUpdateStatusCard = async (req, res)=>{
+    try {
+        const today = new Date()
+        const overdueCards = await Card.find({
+            status: 'Active',
+            ngayHetHan: {$lt: today}
+        })
+        for(const cardRecord of overdueCards){
+            cardRecord.status = 'Overdue'
+            await cardRecord.save()
+        }
+        console.log('Manual check complete. Updated cards.')
+        res.status(201).json({ message: 'Check - Updated Successfully' })
+    } catch (error) {
+        console.error('Error checking and updating cards:', error)
+        res.status(500).json({ message: "Error during manual check and update." })
+    }
+}

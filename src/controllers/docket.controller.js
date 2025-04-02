@@ -3,7 +3,7 @@ import Book from "../models/Book.js"
 import Card from "../models/Card.js"
 import Docket from "../models/docket.js"
 import User from "../models/User.js"
-
+import docket from "../models/docket.js"
 export const creatDocket = async (req, res) => {
     const { IdDocket, IdCard, IdBook, Identification, ngayMuon, ngayHenTra, ngayTra, soLuongMuon } = req.body
 
@@ -44,35 +44,35 @@ export const creatDocket = async (req, res) => {
             return res.status(400).json({ message: "docket with provided IdDocket already exists." })
         }
 
-        const cardExists = await Card.findOne({ IdCard: IdCard });
+        const cardExists = await Card.findOne({ IdCard: IdCard })
         if (!cardExists) {
-            return res.status(400).json({ message: "Card with provided IdCard does not exist." });
+            return res.status(400).json({ message: "Card with provided IdCard does not exist." })
         }
 
-        const AdminExists = await User.findOne({ Identification: Identification });
+        const AdminExists = await User.findOne({ Identification: Identification })
         if (!AdminExists) {
-            return res.status(400).json({ message: "Admin with provided Identification does not exist." });
+            return res.status(400).json({ message: "Admin with provided Identification does not exist." })
         }
 
         const hasExistingLoan = await Docket.findOne({
             IdBook: IdBook,
             IdCard: IdCard,
-            //ngayTra: null 
+            status: 'active' 
         })
         if (hasExistingLoan) {
             return res.status(400).json({ message: "Students have borrowed this book." })
         }
 
         // Sử dụng Transaction
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        const session = await mongoose.startSession()
+        session.startTransaction()
 
         try {
-            const book = await Book.findOne({ IdBook: IdBook }).session(session);
+            const book = await Book.findOne({ IdBook: IdBook }).session(session)
             if (!book) {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({ message: "Book with provided IdBook does not exist." });
+                await session.abortTransaction()
+                session.endSession()
+                return res.status(400).json({ message: "Book with provided IdBook does not exist." })
             }
 
             if (book.soLuong < soLuongMuon) {
@@ -80,8 +80,8 @@ export const creatDocket = async (req, res) => {
                 session.endSession()
                 return res.status(400).json({ message: "Không đủ số lượng sách để mượn." })
             }
-
-            book.soLuong -= soLuongMuon;
+            book.soLuongCon = book.soLuong - soLuongMuon
+            //book.soLuong -= soLuongMuon
             await book.save({ session })
 
             const newDocket = new Docket({
@@ -95,7 +95,7 @@ export const creatDocket = async (req, res) => {
                 soLuongMuon,
             })
 
-             await newDocket.save({ session }) 
+            await newDocket.save({ session }) 
             await session.commitTransaction()
             session.endSession()
 
@@ -116,8 +116,8 @@ export const creatDocket = async (req, res) => {
                 return res.status(400).json({ message: "Invalid docket data" })
             }
         } catch (error) {
-            await session.abortTransaction();
-            session.endSession();
+            await session.abortTransaction()
+            session.endSession()
             console.error("Error creating docket:", error)
             if (error.name === 'ValidationError') {
                 const errors = {}
@@ -140,6 +140,7 @@ export const creatDocket = async (req, res) => {
         res.status(500).json({ message: "Failed to create docket. Please try again later." })
     }
 }
+
 
 export const getDocket = async (req, res) => {
     try {
@@ -170,22 +171,117 @@ export const checkAndUpdateStatus = async (req, res) => {
     }
 }
 
-
-export const upadateTraSach = async (req, res) => {
-    const { _id } = req.params
-    const ngayTra = req.body
+export const deleteDocket = async(req, res)=>{
     try {
-        const docketRecord = await Docket.findById(_id)
-        if (!docketRecord) {
-            return res.status(404).json({ message: 'Khong tim thay phieu muon sach' })
+        const {_id} =req.params
+        const result = await docket.findOneAndDelete({
+            _id: _id,
+            status: 'returned'
+        })
+        if (!result) {
+            return res.status(404).json({ message: 'Docket not found or not return Book' })
         }
 
-        Object.assign(docketRecord, ngayTra)
-        await docketRecord.save()
-        res.json({ message: "Cập nhật phiếu mượn thành công", docket: docketRecord })
+        res.status(200).json({ message: 'Docket deleted successfully' })
     } catch (error) {
-        console.error("Lỗi cập nhật phiếu mượn:", error)
-        res.status(500).json({ message: "Lỗi server khi cập nhật phiếu mượn" })
+        console.error('Error deleting Docket:', error)
+        res.status(500).json({ message: 'Internal Server Error' })
+    }
+}
+export const searchDocket = async (req, res)=>{
+    try {
+        const {infoDocket} = req.body
+        if(!infoDocket){
+            return res.status(400).json({message: 'Docket is required'})
+        }
+        const resultSearch = await docket.find({
+            $or:[
+                {Identification: {$regex: infoDocket } },
+                {IdCard: {$regex: infoDocket} },
+                {IdBook: {$regex: infoDocket} },
+            ]
+        })
+        console.log("Filtered Docket result: ", resultSearch)
+        res.status(200).json(resultSearch)
+    } catch (error) {
+        console.error("Error in searchDocket controller", error.message)
+        return res.status(500).json({ message: "Internal server error" })
+    }
+}
+export const upadateTraSach = async (req, res) => {
+    const { _id } = req.params
+    const { ngayTra , status} = req.body
+
+    const session = await mongoose.startSession()
+    session.startTransaction()
+
+    try {
+        const docketRecord = await Docket.findById(_id).session(session)
+        if (!docketRecord) {
+            await session.abortTransaction()
+            return res.status(404).json({ message: 'Không tìm thấy phiếu mượn.' })
+        }
+
+        if (docketRecord.ngayTra) {
+            await session.abortTransaction()
+            return res.status(400).json({ message: 'Sách đã được trả rồi.' })
+        }
+
+        const book = await Book.findOne({ IdBook: docketRecord.IdBook }).session(session)
+        if (!book) {
+            await session.abortTransaction()
+            return res.status(500).json({ message: 'Lỗi dữ liệu: Không tìm thấy sách.' })
+        }
+
+        docketRecord.ngayTra = new Date(ngayTra)
+        docketRecord.status = status
+        book.soLuongCon += docketRecord.soLuongMuon
+
+        await docketRecord.save({ session })
+        await book.save({ session })
+        await session.commitTransaction()
+
+        res.json({ message: "Cập nhật trả sách thành công", docket: docketRecord })
+
+    } catch (error) {
+        await session.abortTransaction()
+        console.error("Lỗi cập nhật trả sách:", error)
+        res.status(500).json({ message: "Lỗi server khi cập nhật trả sách" })
+    } finally {
+        session.endSession()
+    }
+}
+
+// cần cải thiện getBorrowedBooks 
+export const getBorrowedBooks = async (req, res) => {
+    const { Identification } = req.query
+
+    if (!Identification) {
+        return res.status(400).json({ message: "Identification is required" })
+    }
+
+    try {
+        const borrowedDockets = await Docket.find({ Identification: Identification })
+
+        const bookIds = borrowedDockets.map(docket => docket.IdBook)
+
+        const books = await Book.find({ IdBook: { $in: bookIds } })
+
+        const bookMap = {}
+        books.forEach(book => {
+            bookMap[book.IdBook] = book
+        })
+
+        const borrowedDocketsWithBooks = borrowedDockets.map(docket => ({
+            ...docket.toObject(),
+            book: bookMap[docket.IdBook] || null 
+        }))
+
+        res.json(borrowedDocketsWithBooks)
+
+    } catch (error) {
+        console.error('Error getting borrowed books:', error)
+        res.status(500).json({ message: "Failed to get borrowed books", error: error.message })
     }
 }
 

@@ -24,6 +24,12 @@ const cardSchema = new mongoose.Schema(
         },
         status:{
             type: String,
+            required: false,
+            enum: ['Active', 'Overdue', 'Suspend'],
+            default: 'Active'
+        },
+        announcement: {
+            type: String,
             required: false
         }
     },
@@ -34,3 +40,4 @@ const cardSchema = new mongoose.Schema(
 
 const Card = mongoose.model("Card", cardSchema)
 export default Card
+

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Book from "../models/Book.js";
 export const addBook = async (req, res) => {
-    const { IdBook ,bookName, description, author, NXB, soLuong } = req.body;
+    const { IdBook ,bookName, description, author, NXB, soLuong, pdfUrl  } = req.body;
     try {
       if (!IdBook || !bookName || !description || !author || !NXB || !soLuong) {
         return res.status(400).json({ message: "All fields are required" });
@@ -12,7 +12,9 @@ export const addBook = async (req, res) => {
         description,
         author,
         NXB,
-        soLuong
+        soLuong,
+        soLuongCon: soLuong,
+        pdfUrl,
       });
   
       if (newBook) {
@@ -25,6 +27,8 @@ export const addBook = async (req, res) => {
           author: newBook.author,
           NXB: newBook.NXB,
           soLuong: newBook.soLuong,
+          soLuongCon: newBook.soLuongCon,
+          pdfUrl: newBook.pdfUrl
         });
       } else {
         res.status(400).json({ message: "Invalid book data" });
@@ -72,7 +76,7 @@ export const updateBook = async (req, res) => {
       return res.status(400).json({ message: "Invalid book ID format" })
     }
 
-    const {IdBook, bookName, author, NXB, soLuong } = req.body
+    const {IdBook, bookName, author, NXB, soLuong , pdfUrl} = req.body
 
     const book = await Book.findById(_id)
 
@@ -85,6 +89,7 @@ export const updateBook = async (req, res) => {
     book.author = author || book.author
     book.NXB = NXB || book.NXB
     book.soLuong = Number(soLuong) || book.soLuong
+    book.pdfUrl = pdfUrl || pdfUrl.soLuong 
 
     const updatedBook = await book.save()
 
@@ -111,7 +116,7 @@ export const deleteBook = async (req, res) => {
     res.status(200).json({ message: 'Book deleted successfully' })
 
   } catch (error) {
-    console.error('Error deleting user:', error)
+    console.error('Error deleting book:', error)
     res.status(500).json({ message: 'Internal Server Error' })
   }
 };
@@ -132,4 +137,19 @@ export const bookById = async(req, res) =>{
       res.status(500).json({message: "Failed to get card"})
   }
 }
-  
+
+import path, { join } from "path"
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+export const getPDF = async(req, res)=>{
+  const { filename } = req.params
+  console.log("filename:", filename)
+  const pdfPath = path.join(__dirname, '..','taiLieuPDF', filename)
+  try {
+    res.sendFile(pdfPath)
+  } catch (error) {
+    console.error('Error sending PDF:', error)
+    res.status(500).json({ message: 'Error sending PDF' })
+  }
+}

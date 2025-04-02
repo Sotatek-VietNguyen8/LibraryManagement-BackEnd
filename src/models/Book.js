@@ -4,28 +4,38 @@ const bookSchema = new mongoose.Schema(
     {
         IdBook: {
             type: String,
-            require: true
+            required: true
         },
         bookName: {
             type: String,
-            require: true
+            required: true
         },
         description: {
             type: String,
-            require: true
+            required: true
         },
         author: {
             type: String,
-            require: true
+            required: true
         },
         NXB: {
             type: String,
-            require: true
+            required: true
         },
         soLuong: {
             type: Number,
-            require: true,
+            required: true,
             default: 0
+        },
+        soLuongCon:{
+            type:Number,
+            required:false,
+            default: 0
+        },
+        pdfUrl:{
+            type: String,
+            required: false,
+            default: ''
         }
     },
     {
